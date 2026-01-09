@@ -3,7 +3,7 @@
 #include <eigen3/Eigen/Dense>
 #include <iostream>
 
-int main() {
+void example() {
 
   // Basic Example of cpp
   std::cout << "Example of cpp \n";
@@ -40,9 +40,41 @@ int main() {
   std::cout << "Example of output \n";
   std::cout << i << std::endl;
   // matrix add i + j
+  std::cout << i + j << std::endl;
   // matrix scalar multiply i * 2.0
+  std::cout << i * 2.0 << std::endl;
   // matrix multiply i * j
+  std::cout << i * j << std::endl;
   // matrix multiply vector i * v
+  std::cout << i * v << std::endl;
+}
 
+void transformation() {
+  std::cout << "点P(2, 1)，绕原点逆时针旋转45°，然后平移(1, 2)" << std::endl;
+  std::cout << "要求使用齐次坐标" << std::endl;
+  Eigen::Vector3f P(2.0, 1.0, 1);
+  std::cout << "旋转矩阵R:" << std::endl;
+  Eigen::Matrix3f Rotation;
+  float sin45 = std::sqrt(2) / 2;
+  float cos45 = sin45;
+  Rotation << cos45, -sin45, 0, sin45, cos45, 0, 0, 0, 1;
+  std::cout << Rotation << std::endl;
+
+  std::cout << "旋转后：(R * P)" << std::endl;
+  auto after_rotate = Rotation * P;
+  std::cout << after_rotate << std::endl;
+
+  std::cout << "平移矩阵T:" << std::endl;
+  Eigen::Matrix3f Move;
+  Move << 1.0, 0.0, 1.0, 0.0, 1.0, 2.0, 0.0, 0.0, 1.0;
+  std::cout << Move << std::endl;
+
+  std::cout << "最终结果: T * R * P" << std::endl;
+  auto new_point = Move * Rotation * P;
+  std::cout << new_point << std::endl;
+}
+
+int main() {
+  transformation();
   return 0;
 }
