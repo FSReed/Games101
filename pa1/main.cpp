@@ -50,8 +50,8 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     Eigen::Matrix4f convert, translate, scale;
     convert << zNear, 0, 0, 0, 0, zNear, 0, 0, 0, 0, zNear + zFar, -zNear * zFar, 0, 0, 1, 0;
     // Transform (l, r, b, t, n, f) to [-1, 1]^3
-    auto alpha = eye_fov * 180 / MY_PI;
-    auto height = std::abs(zNear * std::tan(alpha / 2));
+    auto alpha = eye_fov / 180 * MY_PI;
+    auto height = 2 * std::abs(zNear * std::tan(alpha / 2));
     auto width = height * aspect_ratio;
     auto depth = std::abs(zFar - zNear);
     // First, translate to the origin
