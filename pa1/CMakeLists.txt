@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(Rasterizer)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(OpenCV_DIR "/home/fsreed/opencv-4.12.0/build")
 find_package(OpenCV REQUIRED)
 
