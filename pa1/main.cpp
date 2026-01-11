@@ -27,6 +27,12 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     // Create the model matrix for rotating the triangle around the Z axis.
     // Then return it.
 
+    rotation_angle = rotation_angle / 180 * MY_PI;
+    Eigen::Matrix4f transform;
+    auto sin_a = std::sin(rotation_angle);
+    auto cos_a = std::cos(rotation_angle);
+    transform << cos_a, -sin_a, 0, 0, sin_a, cos_a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    model = transform * model;
     return model;
 }
 
@@ -41,6 +47,18 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     // Create the projection matrix for the given parameters.
     // Then return it.
 
+    Eigen::Matrix4f convert, translate, scale;
+    convert << zNear, 0, 0, 0, 0, zNear, 0, 0, 0, 0, zNear + zFar, -zNear * zFar, 0, 0, 1, 0;
+    // Transform (l, r, b, t, n, f) to [-1, 1]^3
+    auto alpha = eye_fov * 180 / MY_PI;
+    auto height = std::abs(zNear * std::tan(alpha / 2));
+    auto width = height * aspect_ratio;
+    auto depth = std::abs(zFar - zNear);
+    // First, translate to the origin
+    translate << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -(zNear + zFar) / 2, 0, 0, 0, 1;
+    // Scale to [-1, 1]^3
+    scale << 2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, 2 / depth, 0, 0, 0, 0, 1;
+    projection = scale * translate * convert * projection;
     return projection;
 }
 
@@ -56,8 +74,6 @@ int main(int argc, const char** argv)
         if (argc == 4) {
             filename = std::string(argv[3]);
         }
-        else
-            return 0;
     }
 
     rst::rasterizer r(700, 700);
