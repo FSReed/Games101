@@ -41,8 +41,8 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
 }
 
 
-static bool insideTriangle(int x, int y, const Vector3f* _v)
-{   
+static bool insideTriangle(float x, float y, const Vector3f* _v)
+{
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
     Eigen::Vector3f test_point;
     test_point << x, y, 1;
@@ -123,7 +123,7 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
 //Screen space rasterization
 void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     auto v = t.toVector4();
-    
+
     // TODO : Find out the bounding box of current triangle.
     // iterate through the pixel and find if the current pixel is inside the triangle
     int x_min = std::floor(std::min(t.v[0](0), std::min(t.v[1](0), t.v[2](0))));
@@ -134,26 +134,50 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
     for (int x = x_min; x <= x_max; ++x) {
         for (int y = y_min; y <= y_max; ++y) {
-            if (!insideTriangle(x, y, t.v)) {
+            render_pixel(x, y, t);
+        }
+    }
+}
+
+void rst::rasterizer::render_pixel(int x, int y, const Triangle &t) {
+    auto v = t.toVector4();
+    auto &prev_depth = depth_buf[get_index(x, y)];
+    auto &prev_color = color_buf[get_index(x, y)];
+    Eigen::Vector3f color{0, 0, 0};
+    for (int i = 0; i < super_sample; ++i) {
+        for (int j = 0; j < super_sample; ++j) {
+            float x_mid = x + (i + 0.5) / super_sample;
+            float y_mid = y + (j + 0.5) / super_sample;
+            if (!insideTriangle(x_mid, y_mid, t.v)) {
                 continue;
             }
             // use the following code to get the interpolated z value.
-            auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+            auto[alpha, beta, gamma] = computeBarycentric2D(x_mid, y_mid, t.v);
             float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
             float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
             z_interpolated *= w_reciprocal;
 
             // z-buffer
-            auto &prev_depth = depth_buf[get_index(x, y)];
             // NOTE: the z here is the depth information, not the coordinate in world axis
-            if (z_interpolated < prev_depth) {
-                // update the z-buffer and render this pixel
-                Eigen::Vector3f point(x, y, 1);
-                set_pixel(point, t.getColor());
-                prev_depth = z_interpolated;
+            auto &sample_depth = prev_depth[i + j * super_sample];
+            auto &sample_color = prev_color[i + j * super_sample];
+            if (z_interpolated < sample_depth) {
+                // update the z-buffer of this sample, increase the cnt
+                sample_depth = z_interpolated;
+                sample_color = t.getColor();
             }
         }
     }
+
+    // Computer the pixel color based on sample points
+    for (int i = 0; i < super_sample; ++i) {
+        for (int j = 0; j < super_sample; ++j) {
+            color = color + prev_color[i + j * super_sample];
+        }
+    }
+    color = color / (super_sample * super_sample);
+    Eigen::Vector3f point(x, y, 1);
+    set_pixel(point, color);
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f& m)
@@ -176,16 +200,24 @@ void rst::rasterizer::clear(rst::Buffers buff)
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
         std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+        for (auto &color_list : color_buf) {
+            color_list.resize(super_sample * super_sample);
+            std::fill(color_list.begin(), color_list.end(), Eigen::Vector3f{0, 0, 0});
+        }
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
-        std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
+        for (auto &sample_list : depth_buf) {
+            sample_list.resize(super_sample * super_sample);
+            std::fill(sample_list.begin(), sample_list.end(), std::numeric_limits<float>::infinity());
+        }
     }
 }
 
-rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
+rst::rasterizer::rasterizer(int w, int h, int ss) : width(w), height(h), super_sample(ss)
 {
     frame_buf.resize(w * h);
+    color_buf.resize(w * h);
     depth_buf.resize(w * h);
 }
 

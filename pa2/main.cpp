@@ -53,14 +53,18 @@ int main(int argc, const char** argv)
     float angle = 0;
     bool command_line = false;
     std::string filename = "output.png";
+    int super_sample = 2;
 
-    if (argc == 2)
+    if (argc >= 2)
     {
-        command_line = true;
-        filename = std::string(argv[1]);
+        super_sample = std::stoi(argv[1]);
+        if (argc == 3) {
+            command_line = true;
+            filename = std::string(argv[2]);
+        }
     }
 
-    rst::rasterizer r(700, 700);
+    rst::rasterizer r(700, 700, super_sample);
 
     Eigen::Vector3f eye_pos = {0,0,5};
 
