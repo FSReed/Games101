@@ -100,6 +100,7 @@ Eigen::Vector3f texture_fragment_shader(const fragment_shader_payload& payload)
         // TODO: Get the texture value at the texture coordinates of the current fragment
         auto u = std::clamp(payload.tex_coords.x(), 0.f, 1.f);
         auto v = std::clamp(payload.tex_coords.y(), 0.f, 1.f);
+        // return_color = payload.texture->getColor(u, v);
         return_color = payload.texture->getColorBilinear(u, v);
     }
     Eigen::Vector3f texture_color;
@@ -367,7 +368,7 @@ int main(int argc, const char** argv)
         {
             std::cout << "Rasterizing using the texture shader\n";
             active_shader = texture_fragment_shader;
-            texture_path = "spot_texture.png";
+            texture_path = "spot_texture_512_512.png";
             r.set_texture(Texture(obj_path + texture_path));
         }
         else if (argc == 3 && std::string(argv[2]) == "normal")
