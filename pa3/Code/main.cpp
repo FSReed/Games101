@@ -218,6 +218,28 @@ Eigen::Vector3f displacement_fragment_shader(const fragment_shader_payload& payl
     // Vector ln = (-dU, -dV, 1)
     // Position p = p + kn * n * h(u,v)
     // Normal n = normalize(TBN * ln)
+    auto x = normal.x();
+    auto y = normal.y();
+    auto z = normal.z();
+    auto u = std::clamp(payload.tex_coords[0], 0.f, 1.f);
+    auto v = std::clamp(payload.tex_coords[1], 0.f, 1.f);
+    Eigen::Vector3f t{x*y/sqrt(x*x+z*z),sqrt(x*x+z*z),z*y/sqrt(x*x+z*z)};
+    Eigen::Vector3f b = normal.cross(t);
+    Eigen::Matrix3f TBN;
+    TBN << t, b, normal;
+    float w = payload.texture->width;
+    float h = payload.texture->height;
+    auto height_u_v = payload.texture->getColor(u, v).norm();
+    auto height_u1_v = payload.texture->getColor(std::clamp(u + 1.f / w, 0.f, 1.f), v).norm();
+    auto height_u_v1 = payload.texture->getColor(u, std::clamp(v + 1.f / h, 0.f, 1.f)).norm();
+    auto dU = kh * kn * (height_u1_v - height_u_v);
+    auto dV = kh * kn * (height_u_v1 - height_u_v);
+    Eigen::Vector3f ln{-dU, -dV, 1};
+
+    // NOTE: Different from bump mapping
+    point = point + kn * normal * height_u_v;
+
+    normal = (TBN * ln).normalized();
 
 
     Eigen::Vector3f result_color = {0, 0, 0};
@@ -226,8 +248,17 @@ Eigen::Vector3f displacement_fragment_shader(const fragment_shader_payload& payl
     {
         // TODO: For each light source in the code, calculate what the *ambient*, *diffuse*, and *specular* 
         // components are. Then, accumulate that result on the *result_color* object.
-
-
+        auto l = (light.position - point).normalized();
+        auto v = (eye_pos - point).normalized();
+        auto r = (light.position - point).norm();
+        // specular: ks * (I/r^2) * max(0, n*h)
+        auto h = (l + v).normalized();
+        auto specular = ks.cwiseProduct(light.intensity / (r * r) * std::pow(std::max(0.f, normal.dot(h)), p));
+        // diffuse
+        auto diffuse = kd.cwiseProduct(light.intensity / (r * r) * std::max(0.f, normal.dot(l)));
+        // ambient
+        auto ambient = ka.cwiseProduct(amb_light_intensity);
+        result_color += specular + diffuse + ambient;
     }
 
     return result_color * 255.f;
