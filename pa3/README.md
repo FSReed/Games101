@@ -25,16 +25,16 @@ $$
 
 由于原法向量和原平面是垂直的，这就要求 $(M')^T \times M = I$ ,这也就说明 $M' = (M^{-1})^T$ ,对应于代码框架中的 `(view * model).inverse().transpose()`  
 三角形的 $(x, y, z)$ 值都通过齐次坐标除法转换为了经过MVP投影后的空间点坐标，z表达的就是深度值。而`viewspace_pos`中的坐标就是三角形的顶点世界坐标，没有经过投影变换，也就无法表征深度，只用于插值计算像素点的空间坐标，用于后续shader着色  
-对于屏幕上投影出的三角形内一个点 $(x, y)$ ，该如何插值计算该点属性？其实这需要用到透视投影矫正，设该点的插值深度为 $w_0$ ，利用三角形三个顶点的深度 $w_i$ 可以进行这样的插值：
+对于屏幕上投影出的三角形内一个点 $(x, y)$ ，该如何插值计算该点属性？其实这需要用到透视投影矫正，设该点的插值深度为 $w_0$ ，利用三角形三个顶点的深度 $w_i$ 可以进行这样的插值：(推导过程可见[这里](https://www.cs.ucr.edu/~craigs/courses/2018-fall-cs-130/lectures/perspective-correct-interpolation.pdf))
 
 $$
-\frac{1}{w_0} = \sum_{i = 0}^3{\frac{1}{w_i}}
+\frac{1}{w_0} = \frac{\alpha}{w_1} + \frac{\beta}{w_2} + \frac{\gamma}{w_3}
 $$
 
 对于节点属性插值可以通过类似方法计算，这里的 $attr$ 可以表示颜色、法向量、贴图坐标、世界坐标等各种属性。注意代码框架中向`rasterize_triangle`中传入了`viewsapce_pos`，这就是用来插值像素点的空间坐标的
 
 $$
-\frac{attr}{w_0} = \sum_{i = 0}^3{\frac{attr_i}{w_i}}
+\frac{attr_0}{w_0} = \frac{\alpha}{w_1}attr_1 + \frac{\beta}{w_2}attr_2 + \frac{\gamma}{w_3}attr_3
 $$
 
 ## fragment_shader 绘制过程分析
