@@ -24,16 +24,16 @@ public:
 
     Eigen::Vector3f getColor(float u, float v)
     {
-        auto u_img = u * width;
-        auto v_img = (1 - v) * height;
+        auto u_img = std::clamp(u * width, 0.f, float(width - 1));
+        auto v_img = std::clamp((1 - v) * height, 0.f, float(height - 1));
         auto color = image_data.at<cv::Vec3b>(v_img, u_img);
         return Eigen::Vector3f(color[0], color[1], color[2]);
     }
 
     Eigen::Vector3f getColorBilinear(float u, float v)
     {
-        auto u_point = std::clamp(u * width, 0.f, (float)width);
-        auto v_point = std::clamp((1 - v) * height, 0.f, float(height));
+        auto u_point = std::clamp(u * width, 0.f, float(width - 1));
+        auto v_point = std::clamp((1 - v) * height, 0.f, float(height - 1));
 
         auto u_left = std::clamp(std::floor(u_point), 0.f, (float)width);
         auto u_right = std::clamp(std::ceil(u_point), 0.f, (float)width);
